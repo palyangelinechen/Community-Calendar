@@ -2,34 +2,37 @@ const express = require("express");
 const _ = require("lodash");
 const eventsRoute = express.Router();
 const {Event} = require("../models/event.js");
-eventsRoute.get("/", (req, res) => {
+const {validateUser} = require("../middleware/middleware.js");
+eventsRoute.get("/", validateUser, (req, res) => {
   Event.find()
   .then(events => {
     res.render("index.hbs", {
-      events
+      myEvents: events.filter(event => event.userId === req.session.userId),
+      allEvents: events
     });
   })
   .catch(e => {
     res.status(404).send(e);
   })
 })
-eventsRoute.get("/new", (req, res) => {
+eventsRoute.get("/new", validateUser, (req, res) => {
   res.render("new.hbs");
 })
-eventsRoute.post("/", (req, res) => {
+eventsRoute.post("/", validateUser, (req, res) => {
   const event = new Event({
     title: req.body.title,
-    description: req.body.description
+    description: req.body.description,
+    userId: req.session.userId
   })
   event.save()
   .then(event => {
-    res.redirect("/");
+    res.redirect("/events");
   })
   .catch(e => {
     res.status(404).send(e);
   })
 })
-eventsRoute.get("/:id", (req, res) => {
+eventsRoute.get("/:id", validateUser, (req, res) => {
   Event.find({_id: req.params.id})
   .then(event => {
     res.render("show.hbs", {
@@ -42,7 +45,7 @@ eventsRoute.get("/:id", (req, res) => {
     res.status(404).send(e);
   })
 })
-eventsRoute.get("/:id/edit", (req, res) => {
+eventsRoute.get("/:id/edit", validateUser, (req, res) => {
   Event.find({_id: req.params.id})
   .then(event => {
     res.render("edit.hbs", {
@@ -55,22 +58,22 @@ eventsRoute.get("/:id/edit", (req, res) => {
     res.status(404).send(e);
   })
 })
-eventsRoute.put("/:id", (req, res) => {
+eventsRoute.put("/:id", validateUser, (req, res) => {
   const id = req.params.id;
   const body = _.pick(req.body, ["title", "description"]);
   Event.findByIdAndUpdate(id, {$set: body}, {new: true})
   .then(event => {
-    res.redirect("/");
+    res.redirect("/events");
   })
   .catch(e => {
     res.status(404).send(e);
   })
 })
-eventsRoute.delete("/:id", (req, res) => {
+eventsRoute.delete("/:id", validateUser, (req, res) => {
   const id = req.params.id;
   Event.findByIdAndRemove(id)
   .then(event => {
-    res.redirect("/");
+    res.redirect("/events");
   })
   .catch(e => {
     res.status(404).send(e);
